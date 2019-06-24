@@ -2,5 +2,7 @@
     "prefix": "%",
     "command": "24hrole",
     "time": "86400000",
-    "token": "12345678910"
+    "token": "12345678910",
+    "removalMessage": "Your temporary role has been removed.",
+    "addMessage": "You have been given a temporary role."
 }

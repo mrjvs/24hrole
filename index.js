@@ -5,7 +5,7 @@ const Discord = require('discord.js');
 const client = new Discord.Client();
 
 // config
-const config = require('config.json');
+const config = require('./config.json');
 
 function setTemporaryRoleTimer(time, guildID, roleID, userIDArray) {
     // set a timeout to remove the role after certain time.
@@ -15,8 +15,9 @@ function removeTemporaryRole(guildID, roleID, userIDArray) {
     // get discord server from id
     const guild = client.guilds.get(guildID);
     // loop through the users and remove the role from each user.
-    for (let userID in userIDArray) {
-        guild.members.get(userID).removeRole(roleID);
+    for (let i in userIDArray) {
+        guild.members.get(userIDArray[i]).removeRole(roleID);
+        sendRemovalMessage(guild, userIDArray[i]);
     }
 }
 function addTemporaryRole(time, guildID, roleID, userIDArray) {
@@ -24,11 +25,24 @@ function addTemporaryRole(time, guildID, roleID, userIDArray) {
     const guild = client.guilds.get(guildID);
 
     // loop through the users and add the role to each user.
-    for (let userID in userIDArray) {
-        guild.members.get(userID).addRole(roleID);
+    for (let i in userIDArray) {
+        guild.members.get(userIDArray[i]).addRole(roleID);
+        sendAddMessage(guild, userIDArray[i]);
     }
     // register timer
     setTemporaryRoleTimer(time, guildID, roleID, userIDArray);
+}
+
+function sendRemovalMessage(guild, userID) {
+    guild.members.get(userID).createDM().then((channel) => {
+        channel.send(config.removalMessage);
+    });
+}
+
+function sendAddMessage(guild, userID) {
+    guild.members.get(userID).createDM().then((channel) => {
+        channel.send(config.addMessage);
+    });
 }
 
 function returnError(channel, errorText) {
@@ -53,7 +67,7 @@ client.on('message', (message) => {
         // check if command. first arg is command name
         if (args[0] === config.command) {
             // check if user has permission to run the command
-            if (!message.author.hasPermission('MANAGE_ROLES')) {
+            if (!message.guild.member(message.author).hasPermission('MANAGE_ROLES')) {
                 return returnError(message.channel, "You don't have the permissions to use this command");
             }
 
@@ -68,8 +82,9 @@ client.on('message', (message) => {
             // if role id is correct. set role variable to the id
             if (roles.get(args[1])) role = args[1];
             // loop through roles. if name corresponds to inputted role. set role variable to the id
-            for (let i in roles) {
-                if (roles[i].name == args[1]) role = roles[i].id; 
+            const roleArray = roles.array();
+            for (let i in roleArray) {
+                if (roleArray[i].name == args[1]) role = roleArray[i].id;
             }
             // check if a role has been found
             if (!role) {
@@ -97,9 +112,15 @@ client.on('message', (message) => {
             }
 
             // sets temporary role
-            return addTemporaryRole(config.time, message.guild.id, 'test', ['test', 'test']);
+            addTemporaryRole(config.time, message.guild.id, role, users);
+            return message.channel.send("The temporary role has been added succesfully");
         }
     }
+});
+
+// fires when the bot has logged in and is ready for action.
+client.on('ready', () => {
+    console.log('Bot is ready!');
 });
 
 // login the bot with the discord bot token
